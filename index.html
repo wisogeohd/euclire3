@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>European Climate Relocation &amp; Retreat Platform</title>
+  <meta name="description" content="Interactive map of climate-related relocations and managed retreats in Europe">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <!-- Leaflet.markercluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loading-text" style="font-size:13px;color:#5a6a7e">Karte wird geladen …</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     NAVIGATION
+═══════════════════════════════════════════════════════ -->
+<nav id="navbar">
+
+  <!-- Logo + Brand -->
+  <a class="navbar-brand" href="#">
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="34" height="34" rx="7" fill="rgba(255,255,255,.12)"/>
+      <path d="M17 5C13.13 5 10 8.13 10 12c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+        fill="white" opacity=".9"/>
+      <circle cx="17" cy="12" r="3" fill="#1e5799"/>
+      <path d="M8 24 Q10 22 12 24 Q14 26 16 24 Q18 22 20 24 Q22 26 24 24 Q26 22 28 24"
+        stroke="rgba(255,255,255,.5)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div class="brand-text">
+      <span class="title">European Climate Relocation</span>
+      <span class="sub">&amp; Retreat Platform</span>
+    </div>
+  </a>
+
+  <!-- Nav links -->
+  <ul class="navbar-nav" id="main-nav">
+    <li><a href="#" class="active" data-i18n="nav_map">Karte</a></li>
+    <li><a href="#" data-i18n="nav_cases">Fallstudien</a></li>
+    <li><a href="#" data-i18n="nav_compare">Vergleich</a></li>
+    <li><a href="#" data-i18n="nav_insights">Erkenntnisse</a></li>
+    <li><a href="#" data-i18n="nav_resources">Ressourcen</a></li>
+  </ul>
+
+  <!-- Actions -->
+  <div class="navbar-actions">
+    <!-- Language toggle -->
+    <div class="lang-toggle">
+      <button class="lang-btn" data-lang="de" onclick="setLang('de')">DE</button>
+      <span class="lang-sep">|</span>
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    </div>
+
+    <button class="btn btn-outline btn-sm">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/>
+      </svg>
+      <span data-i18n="nav_request">Analyse anfragen</span>
+    </button>
+    <button class="btn btn-primary btn-sm">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span data-i18n="nav_login">Login</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════
+     APP LAYOUT
+═══════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Mobile panel toggle -->
+  <button id="toggle-panel-btn" data-i18n-title="panel_header">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- ══════════════════════════════════════
+       LEFT PANEL — Filter + Case List
+  ══════════════════════════════════════ -->
+  <aside id="left-panel">
+
+    <div class="panel-header" data-i18n="panel_header">Fallsuche &amp; Filter</div>
+
+    <!-- Search -->
+    <div class="search-box">
+      <div class="search-input-wrap">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/>
+        </svg>
+        <input type="search" id="search-input"
+          data-i18n-placeholder="search_placeholder"
+          placeholder="Ort, Land, Stichwort …" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Hazard type chips -->
+    <div class="filter-section">
+      <div class="filter-label" data-i18n="filter_hazard">Gefahrentyp</div>
+      <div class="filter-chips" id="chips-hazard">
+        <span class="chip active" data-value="all"       data-i18n="chip_all">Alle</span>
+        <span class="chip" data-value="Flood"      data-i18n="chip_flood"
+          style="border-color:#90caf9;color:#1565c0">Flut</span>
+        <span class="chip" data-value="Earthquake" data-i18n="chip_earthquake"
+          style="border-color:#ffab91;color:#bf360c">Erdbeben</span>
+        <span class="chip" data-value="Landslide"  data-i18n="chip_landslide"
+          style="border-color:#bcaaa4;color:#4e342e">Hangrutsch</span>
+        <span class="chip" data-value="Volcanic"   data-i18n="chip_volcanic"
+          style="border-color:#ce93d8;color:#6a1b9a">Vulkan</span>
+        <span class="chip" data-value="Coastal"    data-i18n="chip_coastal"
+          style="border-color:#80cbc4;color:#004d40">Küste</span>
+        <span class="chip" data-value="Storm"      data-i18n="chip_storm"
+          style="border-color:#80deea;color:#006064">Sturm</span>
+        <span class="chip" data-value="Unknown"    data-i18n="chip_unknown"
+          style="border-color:#b0bec5;color:#455a64">Unbekannt</span>
+      </div>
+    </div>
+
+    <!-- Dropdowns -->
+    <div class="filter-section">
+      <div class="filter-label" style="margin-bottom:6px" data-i18n="filter_country">Land</div>
+      <select id="filter-country" class="filter-select">
+        <option id="opt-all-countries" value="all" data-i18n="opt_all_countries">Alle Länder</option>
+      </select>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label" style="margin-bottom:6px" data-i18n="filter_status">Status</div>
+      <select id="filter-status" class="filter-select">
+        <option id="opt-all-status" value="all" data-i18n="opt_all_status">Alle Status</option>
+      </select>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label" style="margin-bottom:6px" data-i18n="filter_retreat_lbl">Maßnahmentyp</div>
+      <select id="filter-retreat" class="filter-select">
+        <option id="opt-all-types"   value="all"        data-i18n="opt_all_types">Alle Typen</option>
+        <option id="opt-retreat"     value="Retreat"    data-i18n="opt_retreat">Retreat (Rückzug)</option>
+        <option id="opt-relocation"  value="Relocation" data-i18n="opt_relocation">Relocation (Umsiedlung)</option>
+      </select>
+    </div>
+
+    <!-- Reset -->
+    <div style="padding:8px 14px;border-bottom:1px solid var(--border)">
+      <button id="btn-reset" class="btn btn-outline btn-sm"
+        style="width:100%;color:var(--text-muted);border-color:var(--border)"
+        data-i18n="btn_reset">
+        Filter zurücksetzen
+      </button>
+    </div>
+
+    <!-- Stats mini-bar -->
+    <div class="stats-bar">
+      <div class="stat-cell">
+        <div class="num" id="stat-total">—</div>
+        <div class="lbl" data-i18n="stat_total">Fälle gesamt</div>
+      </div>
+      <div class="stat-cell">
+        <div class="num" id="stat-countries">—</div>
+        <div class="lbl" data-i18n="stat_countries">Länder</div>
+      </div>
+      <div class="stat-cell">
+        <div class="num" id="stat-completed">—</div>
+        <div class="lbl" data-i18n="stat_completed">Abgeschlossen</div>
+      </div>
+      <div class="stat-cell">
+        <div class="num" id="stat-withdata">—</div>
+        <div class="lbl" data-i18n="stat_withdata">Mit Volldaten</div>
+      </div>
+    </div>
+
+    <!-- Case count -->
+    <div id="case-count" style="padding:7px 14px;font-size:11px;color:var(--text-muted);
+      background:var(--accent);border-bottom:1px solid var(--border)">
+    </div>
+
+    <!-- Case list -->
+    <div id="case-list-wrap">
+      <div id="case-list"></div>
+    </div>
+
+  </aside>
+
+  <!-- ══════════════════════════════════════
+       MAP
+  ══════════════════════════════════════ -->
+  <div id="map-wrap">
+    <div id="map"></div>
+
+    <!-- Map control buttons -->
+    <div class="map-controls">
+      <button class="map-ctrl-btn" id="btn-fit-all" data-i18n-title="btn_fit_all">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- HeiGIT attribution (language-neutral) -->
+    <div class="heigit-attr">
+      Map powered by <a href="https://heigit.org" target="_blank" rel="noopener">HeiGIT.org</a>
+    </div>
+
+    <!-- Legend -->
+    <div id="legend">
+      <h4 data-i18n="legend_title">Gefahrentyp</h4>
+      <div class="legend-row"><div class="legend-dot" style="background:#2196F3"></div>
+        <span data-i18n="legend_flood">Flut / Hochwasser</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#FF5722"></div>
+        <span data-i18n="legend_earthquake">Erdbeben</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#795548"></div>
+        <span data-i18n="legend_landslide">Hangrutsch / Erdrutsch</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#9C27B0"></div>
+        <span data-i18n="legend_volcanic">Vulkanismus</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#009688"></div>
+        <span data-i18n="legend_coastal">Küstenerosion / Küstenflut</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#00BCD4"></div>
+        <span data-i18n="legend_storm">Sturm / Wind</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#607D8B"></div>
+        <span data-i18n="legend_unknown">Unbekannt / Sonstige</span></div>
+    </div>
+
+    <!-- ── DETAIL PANEL ── -->
+    <div id="detail-overlay"></div>
+
+    <aside id="detail-panel">
+      <button id="detail-close-tab" data-i18n-title="close_tab">
+        <span class="tab-arrow">›</span>
+        <span class="tab-label" data-i18n="close_tab">Schließen</span>
+      </button>
+
+      <div class="detail-header">
+        <div style="min-width:0;flex:1">
+          <div class="detail-title" id="detail-title">—</div>
+          <div class="detail-subtitle" id="detail-subtitle">—</div>
+        </div>
+        <button class="close-btn" id="btn-close-detail" data-i18n-title="close_btn">
+          <span class="close-icon">✕</span>
+          <span data-i18n="close_btn">Schließen</span>
+        </button>
+      </div>
+      <div class="detail-body" id="detail-body"></div>
+    </aside>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ── Scripts ── -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="data/cases.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+  // Safety timeout: remove loading screen after 8s
+  setTimeout(function() {
+    var el = document.getElementById('loading');
+    if (el && el.parentNode) {
+      el.style.opacity = '0'; el.style.transition = 'opacity 0.4s';
+      setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+    }
+  }, 8000);
+  window.addEventListener('error', function(e) {
+    var el = document.getElementById('loading');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+    var toast = document.getElementById('toast');
+    if (toast) { toast.textContent = 'Error: ' + e.message; toast.style.opacity = '1'; }
+    console.error('CRPR error:', e);
+  });
+</script>
+
+</body>
+</html>
