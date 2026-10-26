@@ -12,7 +12,6 @@ const TRANSLATIONS = {
     nav_insights:     'Erkenntnisse',
     nav_resources:    'Ressourcen',
     nav_request:      'Analyse anfragen',
-    nav_login:        'Login',
 
     // Left panel
     panel_header:     'Fallsuche & Filter',
@@ -108,7 +107,6 @@ const TRANSLATIONS = {
     nav_insights:     'Insights',
     nav_resources:    'Resources',
     nav_request:      'Request Analysis',
-    nav_login:        'Login',
 
     // Left panel
     panel_header:     'Case Search & Filter',

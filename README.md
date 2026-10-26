@@ -319,6 +319,7 @@ Für Offline-Betrieb: Dateien unter `js/lib/` und `css/lib/` ablegen und Pfade i
 
 ## Lizenz & Attributionen
 
+- **Website-Inhalte und Forschungsdaten**: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — Namensnennung und Weitergabe unter gleichen Bedingungen.
 - **Kartendaten**: © [OpenStreetMap](https://www.openstreetmap.org/copyright)-Mitwirkende (ODbL)
 - **Kartentechnologie**: [Leaflet.js](https://leafletjs.com/) (BSD 2-Clause)
 - **Clustering**: [Leaflet.markercluster](https://github.com/Leaflet/Leaflet.markercluster) (MIT)
