@@ -2,9 +2,8 @@
  * European Climate Relocation & Retreat Platform (CRPR)
  * Interactive WebGIS — Static Application
  *
- * Datenquellen:
- *   - KML: 20260217_Originsites.kml (172 Herkunftsorte)
- *   - Excel: CRPR_Datenbank.xlsx (Falldatenbank)
+ * Datenquelle:
+ *   - data/cases.js, generiert aus PR_Cases_Europe_AL.xlsx (Koordinaten und Falldaten)
  *
  * Technologien:
  *   - Leaflet.js 1.9 (Karte)
@@ -463,7 +462,7 @@ function populateFilterDropdowns() {
   // Statuses
   const statusSel = document.getElementById('filter-status');
   if (statusSel) {
-    ['Completed', 'Ongoing'].forEach(s => {
+    ['Completed', 'Ongoing', 'Planning'].forEach(s => {
       if (stats.by_status[s]) {
         const o = document.createElement('option');
         o.value = s; o.textContent = `${s} (${stats.by_status[s]})`;

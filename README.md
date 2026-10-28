@@ -13,9 +13,9 @@ Dieses WebGIS visualisiert Fälle **klimabedingter geplanter Umsiedlungen und Si
 | Kartenbibliothek | [Leaflet.js 1.9.4](https://leafletjs.com/) |
 | Clustering | [Leaflet.markercluster 1.5.3](https://github.com/Leaflet/Leaflet.markercluster) |
 | Hintergrundkarte | OpenStreetMap (© OpenStreetMap-Mitwirkende) |
-| Datenquellen | KML-Herkunftsorte + Excel-Falldatenbank |
-| Fälle gesamt | 172 (KML) + erweiterbar über Excel |
-| Letzte Aktualisierung | 2026-05-11 |
+| Datenquelle | Excel-Falldatenbank inklusive Koordinaten |
+| Fälle gesamt | Wird beim Generieren aus Excel übernommen |
+| Letzte Datengenerierung | Siehe Kopfzeile in `data/cases.js` |
 
 ---
 
@@ -30,6 +30,8 @@ webgis/
 │   └── app.js          ← Anwendungslogik (Karte, Filter, Detailansicht)
 ├── data/
 │   └── cases.js        ← Alle Falldaten als JavaScript-Objekt
+├── scripts/
+│   └── generate_cases.py ← Generiert cases.js aus der Excel-Datei
 └── README.md           ← Diese Dokumentation
 ```
 
@@ -113,12 +115,7 @@ Erscheint beim Klick auf Marker oder Listeneintrag:
 
 ## Datenstruktur
 
-### KML-Datei (`20260217_Originsites.kml`)
-- **172 Placemarks** mit Name und GPS-Koordinaten (WGS84, EPSG:4326)
-- Herkunftsort-Koordinaten (lon, lat)
-- Wird bei jedem Daten-Update neu verarbeitet
-
-### Excel-Datei (`CRPR_Datenbank.xlsx`)
+### Excel-Datei (`PR_Cases_Europe_AL.xlsx`)
 Tabellenblatt `Tabelle1` mit folgenden Spalten:
 
 | Spalte | Beschreibung |
@@ -126,23 +123,21 @@ Tabellenblatt `Tabelle1` mit folgenden Spalten:
 | Region | Geografische Großregion (CE = Central Europe etc.) |
 | Country | Land |
 | Province/State | Bundesland / Provinz |
-| Community/Place of Origin | **Schlüsselspalte** für KML-Zuordnung |
+| Community/Place of Origin | Ortsname und Herkunftsort |
+| lat / lon | Koordinaten des Herkunftsorts (WGS84) |
 | Community/Place of Destination | Zielort der Umsiedlung |
 | Distance | Distanz zum Zielort |
 | Spatial Pattern | Räumliches Muster (E1, E2, ...) |
 | Hazard Subtheme | Genauere Gefahrenbeschreibung |
 | Year of hazard event | Jahr des auslösenden Ereignisses |
 | Time of relocation | Zeitraum der Umsiedlung |
-| Years of relocation | Dauer in Jahren |
+| Duration | Dauer der Umsiedlung |
 | Completed/Ongoing | Abgeschlossen oder laufend |
-| Details | Ausführliche Fallbeschreibung |
 | Retreat/Relocation | Art der Maßnahme |
-| Finance | Finanzierungsdetails |
 | Size | Größenordnung (Einwohner / Haushalte) |
-| Complete/partial | Vollständige oder teilweise Umsiedlung |
-| preemptive/reactive | Präventiv oder als Reaktion auf Ereignis |
-| Voluntary/Forced | Freiwillig oder erzwungen |
-| Hazard Type | Haupt-Gefahrentyp (für Farbkodierung) |
+| Grouping | Gruppierung des Falls |
+| Time of Action | Präventiv oder als Reaktion auf Ereignis |
+| Hazard | Haupt-Gefahrentyp (für Farbkodierung) |
 | Resource 1–4 | Literaturquellen / Weblinks |
 
 ### `data/cases.js` — Datenformat
@@ -151,10 +146,10 @@ const CRPR_DATA = {
   cases: [
     {
       id: 1,                        // Interne ID
-      name: "Aci Platani",          // Ortsname (aus KML)
+      name: "...",                  // Ortsname (aus Excel)
       lat: 37.5988577,              // Breitengrad (WGS84)
       lon: 15.1521685,              // Längengrad (WGS84)
-      country: "Italy",             // Land (aus Excel, sonst null)
+      country: "...",               // Land (aus Excel)
       region: "SE",                 // Region (aus Excel, sonst null)
       province: "...",
       origin: "...",                // Herkunftsort
@@ -173,15 +168,15 @@ const CRPR_DATA = {
       voluntary: null,              // voluntary / forced
       resources: [],                // Literaturquellen
       color: "#607D8B",             // Marker-Farbe (aus hazard_type)
-      has_full_data: false          // true = Excel-Daten vorhanden
+      has_full_data: true           // true = Falldaten vorhanden
     },
     // ...
   ],
   stats: {
-    total: 172,
-    by_country: { "Germany": 5, "Austria": 3, ... },
-    by_hazard:  { "Flood": 8, "Unknown": 164 },
-    by_status:  { "Completed": 5, "Ongoing": 3, "Unknown": 164 }
+    total: 175,                     // automatisch aus Excel berechnet
+    by_country: { ... },
+    by_hazard:  { ... },
+    by_status:  { ... }
   }
 };
 ```
@@ -192,57 +187,14 @@ const CRPR_DATA = {
 
 ### Workflow: Excel ergänzen → cases.js neu generieren
 
-1. Excel-Datei erweitern (`CRPR_Datenbank.xlsx`)
-2. KML-Datei ggf. aktualisieren
-3. Skript neu ausführen:
+Die Koordinaten werden direkt aus den Spalten `lat` und `lon` gelesen. KML ist nicht erforderlich. Nach Änderungen an der Arbeitsmappe:
 
 ```bash
-cd /Users/azipf/az/Projekte/2026/KlimaUmsiedlungWebGIS
-
-python3 << 'EOF'
-import xml.etree.ElementTree as ET
-import pandas as pd, json, re
-
-def norm(s):
-    if not s: return ''
-    s = str(s).lower()
-    for old, new in [('ö','o'),('ü','u'),('ä','a'),('ß','ss'),('é','e'),('è','e'),
-                     ('ê','e'),('ñ','n'),('ó','o'),('á','a'),('ú','u'),('í','i'),
-                     ('ç','c'),('ğ','g'),('ş','s'),('ı','i'),('â','a')]:
-        s = s.replace(old, new)
-    return re.sub(r'[^a-z0-9]', '', s)
-
-# KML einlesen
-tree = ET.parse('20260217_Originsites.kml')
-root = tree.getroot()
-ns = {'kml': 'http://www.opengis.net/kml/2.2'}
-placemarks = root.findall('.//kml:Placemark', ns)
-kml_points = []
-for pm in placemarks:
-    name_el = pm.find('kml:name', ns)
-    coords_el = pm.find('.//kml:coordinates', ns)
-    if name_el is None or coords_el is None: continue
-    coords = coords_el.text.strip().split(',')
-    kml_points.append({'name': name_el.text.strip(), 'norm': norm(name_el.text),
-                       'lon': float(coords[0]), 'lat': float(coords[1])})
-
-# Excel einlesen und Matching
-df = pd.read_excel('CRPR_Datenbank.xlsx')
-df = df.where(pd.notna(df), None)
-excel_map = {norm(row.get('Community/Place of Origin')): row.to_dict()
-             for _, row in df.iterrows() if row.get('Community/Place of Origin')}
-
-# ... (Rest des Skripts wie oben, Ausgabe nach webgis/data/cases.js)
-EOF
+python3 -m pip install pandas openpyxl  # einmalig, falls noch nicht installiert
+python3 scripts/generate_cases.py
 ```
 
-### KML-Name ↔ Excel-Name: Zuordnungsregeln
-Das Skript verknüpft KML-Placemarks mit Excel-Zeilen über den normalisierten Ortsnamen:
-1. **Exakter Match** (nach Normalisierung: Kleinbuchstaben, Umlaute ersetzt, Sonderzeichen entfernt)
-2. **Teilstring-Match** (KML-Name ist Teilstring des Excel-Namens oder umgekehrt)
-
-**Derzeit nicht gematchte Fälle:**
-- `Kreis Ahrweiler` (Excel) ↔ `Bad Neuenahr-Ahrweiler` (KML) — manuell zuordnen, falls gewünscht
+Das Skript schreibt `data/cases.js`, erstellt fortlaufende interne IDs und aktualisiert die Statistiken. Die Excel-Spalte `ID` kann mehrfach vorkommen und wird daher nicht als interne Karten-ID verwendet.
 
 ---
 

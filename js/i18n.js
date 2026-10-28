@@ -11,7 +11,6 @@ const TRANSLATIONS = {
     nav_compare:      'Vergleich',
     nav_insights:     'Erkenntnisse',
     nav_resources:    'Ressourcen',
-    nav_request:      'Analyse anfragen',
 
     // Left panel
     panel_header:     'Fallsuche & Filter',
@@ -106,7 +105,6 @@ const TRANSLATIONS = {
     nav_compare:      'Comparisons',
     nav_insights:     'Insights',
     nav_resources:    'Resources',
-    nav_request:      'Request Analysis',
 
     // Left panel
     panel_header:     'Case Search & Filter',
