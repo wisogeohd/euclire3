@@ -19,6 +19,21 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - uses: actions/setup-python@v7
+
+      - name: Install dependencies
+        run: python -m pip install pandas openpyxl
+
+      - name: Generate cases
+        run: python scripts/generate_cases.py
+
+      - name: Commit generated cases
+        uses: EndBug/add-and-commit@v11
+        
+        with:
+          add: data/cases.js
+          message: "Regenerate cases.js from provided data"
+
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v5
         with:
